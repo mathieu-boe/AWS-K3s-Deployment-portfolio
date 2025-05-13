@@ -1,1 +1,1 @@
-# AWS-EKS-Deployment-portfolio
+# AWS-K3s-Deployment-portfolio
