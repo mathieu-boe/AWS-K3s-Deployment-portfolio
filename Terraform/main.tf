@@ -41,7 +41,7 @@ resource "aws_subnet" "dev" {
 resource "aws_subnet" "prod" {
   vpc_id = aws_vpc.main.id
   cidr_block = "10.0.2.0/24"
-  availability_zone = "eu-west-2b"
+  availability_zone = "eu-west-2a"
   map_public_ip_on_launch = true
 
   tags = {
@@ -138,6 +138,20 @@ resource "aws_security_group" "k3s_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self        = true
+  }
+
+  ingress {
+    from_port   = -1
+    to_port     = -1
+    protocol    = "icmp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
   egress {
     from_port  = 0
     to_port = 0
@@ -165,7 +179,7 @@ EC2 Instances
 
 resource "aws_instance" "k3s_master" {
   ami = "ami-0dfe0f1abee59c78d" # Amazon Linux 2023 EU-WEST-2B
-  instance_type = "t2.micro"
+  instance_type = "t2.micro" #t2.micro is not recommended for the Master node (specs are too low), but it's the only one available as Free Tier Eligible on AWS
   key_name = aws_key_pair.deployer.key_name
   subnet_id = aws_subnet.prod.id
   vpc_security_group_ids = [aws_security_group.k3s_sg.id]
@@ -222,9 +236,9 @@ resource "aws_instance" "k3s_worker" {
   }
 
   provisioner "remote-exec" {
-    inline = [
-      "curl -sfL https://get.k3s.io | K3S_URL=https://${aws_instance.k3s_master.public_ip}:6443 K3S_TOKEN=$(cat /tmp/k3s_token.txt) sh -"
-    ]
+  inline = [
+    "bash -c 'SERVER_IP=\"https://${aws_instance.k3s_master.private_ip}:6443\" && K3S_TOKEN=$(cat /tmp/k3s_token.txt) && curl -sfL https://get.k3s.io | K3S_URL=$SERVER_IP K3S_TOKEN=$K3S_TOKEN sh -s - agent'"
+  ]
 
     connection {
       type        = "ssh"
