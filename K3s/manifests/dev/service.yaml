@@ -1,0 +1,14 @@
+# k3s/manifests/dev/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-service
+  namespace: dev
+spec:
+  selector:
+    app: flask-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+  type: NodePort
